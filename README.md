@@ -8,20 +8,20 @@
 **Activate the Virtual Environment:**
 
 * **On Windows:**
-    ```bash
+    ```
     .\venv\Scripts\activate
     ```
 * **On macOS / Linux:**
-    ```bash
+    ```
     source venv/bin/activate
     ```
 
 **Install Required Packages:**
-    ```bash
+    ```
     python -m pip install -r requirements.txt
     ```
 
 **Run the Game:**
-    ```bash
+    ```
     python gameDisplay.py
     ```
