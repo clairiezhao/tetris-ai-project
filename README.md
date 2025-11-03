@@ -1,7 +1,7 @@
 ### To set up and run tetris after you clone the repo, follow these steps:
 
 **Create a Virtual Environment:**
-    ```bash
+    ```
     python -m venv venv
     ```
 
