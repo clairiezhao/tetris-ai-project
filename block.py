@@ -1,6 +1,7 @@
 from colors import Colors
 import pygame
 from position import Position
+import copy
 
 class Block:
     def __init__(self, id):
@@ -17,6 +18,17 @@ class Block:
         self.rotation_state = 0
         self.colors = Colors.get_cell_colors()
     
+    def clone(self):
+        new_block = self.__class__()
+
+        new_block.row_offset = self.row_offset
+        new_block.col_offset = self.col_offset
+        new_block.rotation_state = self.rotation_state
+        new_block.id = self.id
+        new_block.cells = self.cells
+
+        return new_block
+
     def move(self, rows, cols):
         self.row_offset += rows
         self.col_offset += cols

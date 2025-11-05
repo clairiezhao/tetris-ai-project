@@ -1,5 +1,4 @@
 import random
-import copy
 
 # internal helper function to check if a block's position is valid
 def _check_valid_position(grid, block):
@@ -13,34 +12,27 @@ def _check_valid_position(grid, block):
 
 # BFS to find all the possible placements for the current block
 def get_all_end_positions(game):
-    # end_pos = []
     end_pos = {}
     checked_pos = set()
-    # checked_pos = {}
 
     grid = game.grid
     
-    start_block = copy.deepcopy(game.current_block) # copy so we're not repeatedly moving the same block
+    start_block = game.current_block.clone() # clone so we're not repeatedly moving the same block
     queue = [(start_block, [])] 
     start_state = (game.current_block.row_offset, game.current_block.col_offset, game.current_block.rotation_state)
     checked_pos.add(start_state)
-    # checked_pos[start_state] = []
 
     while len(queue) > 0:
         curr_block, curr_path = queue.pop(0)
         
         # check if current state is an end placement, add to end positions if so
-        test_down = copy.deepcopy(curr_block)
+        test_down = curr_block.clone()
         test_down.move(1, 0)
         if not _check_valid_position(grid, test_down):
-            # end_pos.append((curr_block, curr_path))
-            # end_pos.append(curr_path)
-            # end_pos[]
             end_state = (curr_block.row_offset, curr_block.col_offset, curr_block.rotation_state)
             if end_state not in end_pos:
                 end_pos[end_state] = curr_path
             
-
         moves = [
             (0, -1 , False), # left
             (0, 1, False), # right
@@ -49,7 +41,9 @@ def get_all_end_positions(game):
         ]
 
         for row_offset, col_offset, rotate in moves:
-            new_block = copy.deepcopy(curr_block)
+            new_block = curr_block.clone()
+
+            new_block.move(1, 0) # have ai be affected by gravity
 
             if rotate:
                 new_block.rotate()
@@ -67,7 +61,6 @@ def get_all_end_positions(game):
 
             if _check_valid_position(grid, new_block) and new_state not in checked_pos:
                 checked_pos.add(new_state)
-                # checked_pos[new_state] = new_path
                 queue.append((new_block, new_path))
     
     return list(end_pos.values())

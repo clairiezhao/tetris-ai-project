@@ -29,9 +29,9 @@ GAME_UPDATE = pygame.USEREVENT
 # trigger game update event every 200 ms
 pygame.time.set_timer(GAME_UPDATE, 200)
 
-# Timer for AI moves
+# timer for AI moves
 AI_MOVE_EVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(AI_MOVE_EVENT, 150) # AI moves fast (every 50ms)
+pygame.time.set_timer(AI_MOVE_EVENT, 200)
 
 ai_path = []
 ai_moving = False
@@ -71,11 +71,9 @@ while True:
             #         game.update_score(game.current_player_id, 0, 1)
             #     if event.key == pygame.K_w:
             #         game.rotate()
-        if event.type == GAME_UPDATE and (not game.game_over) and game.current_player_id == 0:
+        if event.type == GAME_UPDATE and (not game.game_over):
             game.move_down()
-    
-        # ai player 2, for now (commented out player 2 controls above)
-        if event.type == AI_MOVE_EVENT and game.current_player_id == 1 and not game.game_over:
+
             if ai_path:
                 move = ai_path.pop(0)
                 
@@ -87,8 +85,12 @@ while True:
                     game.move_right()
                 else:
                     game.rotate()
-            else:
-                game.move_down()
+            # else:
+            #     game.move_down()
+    
+        # ai player 2, for now (commented out player 2 controls above)
+        # if event.type == AI_MOVE_EVENT and game.current_player_id == 1 and not game.game_over:
+            
 
     if game.current_player_id != last_player_id:
         if game.current_player_id == 1:
