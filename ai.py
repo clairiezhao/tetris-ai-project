@@ -63,11 +63,11 @@ def get_all_end_positions(game):
                 checked_pos.add(new_state)
                 queue.append((new_block, new_path))
     
-    return list(end_pos.values())
+    return end_pos
 
 # return a random move for the ai to take
 def random_move(game):
-    moves = get_all_end_positions(game)
+    moves = list(get_all_end_positions(game).values())
     if moves:
         return random.choice(moves)
     return None # no valid moves found

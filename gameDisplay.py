@@ -88,10 +88,6 @@ while True:
             # else:
             #     game.move_down()
     
-        # ai player 2, for now (commented out player 2 controls above)
-        # if event.type == AI_MOVE_EVENT and game.current_player_id == 1 and not game.game_over:
-            
-
     if game.current_player_id != last_player_id:
         if game.current_player_id == 1:
             ai_path = ai.random_move(game)
