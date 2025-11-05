@@ -2,6 +2,7 @@ import pygame
 import sys
 from game import Game
 from colors import Colors
+import ai
 
 pygame.init()
 
@@ -28,9 +29,17 @@ GAME_UPDATE = pygame.USEREVENT
 # trigger game update event every 200 ms
 pygame.time.set_timer(GAME_UPDATE, 200)
 
+# Timer for AI moves
+AI_MOVE_EVENT = pygame.USEREVENT + 1
+pygame.time.set_timer(AI_MOVE_EVENT, 150) # AI moves fast (every 50ms)
+
+ai_path = []
+ai_moving = False
 
 # game loop: event handling, update positions, draw objects
 while True:
+    last_player_id = game.current_player_id
+
     for event in pygame.event.get():
         # quit event: click x button on window
         if event.type == pygame.QUIT:
@@ -52,19 +61,46 @@ while True:
                 if event.key == pygame.K_UP:
                     game.rotate()
             # player 2 uses a(=LFT), w(=UP), s(=DWN), d=(RGT)
-            elif((game.current_player_id == 1) and (not game.game_over)):
-                if event.key == pygame.K_a :
-                    game.move_left()
-                if event.key == pygame.K_d:
-                    game.move_right()
-                if event.key == pygame.K_s:
-                    game.move_down()
-                    game.update_score(game.current_player_id, 0, 1)
-                if event.key == pygame.K_w:
-                    game.rotate()
-        if event.type == GAME_UPDATE and (not game.game_over):
+            # elif((game.current_player_id == 1) and (not game.game_over)):
+            #     if event.key == pygame.K_a :
+            #         game.move_left()
+            #     if event.key == pygame.K_d:
+            #         game.move_right()
+            #     if event.key == pygame.K_s:
+            #         game.move_down()
+            #         game.update_score(game.current_player_id, 0, 1)
+            #     if event.key == pygame.K_w:
+            #         game.rotate()
+        if event.type == GAME_UPDATE and (not game.game_over) and game.current_player_id == 0:
             game.move_down()
     
+        # ai player 2, for now (commented out player 2 controls above)
+        if event.type == AI_MOVE_EVENT and game.current_player_id == 1 and not game.game_over:
+            if ai_path:
+                move = ai_path.pop(0)
+                
+                if move == 0:
+                    game.move_down()
+                elif move == 1:
+                    game.move_left()
+                elif move == 2:
+                    game.move_right()
+                else:
+                    game.rotate()
+            else:
+                game.move_down()
+
+    if game.current_player_id != last_player_id:
+        if game.current_player_id == 1:
+            ai_path = ai.random_move(game)
+            ai_moving = True
+
+            if not ai_path:
+                game.game_over = True
+        else:
+            ai_path = []
+            ai_moving = False
+
     # ui graphics
     score1_surface = title_font.render(str(game.player1.score), True, Colors.white)
     score2_surface = title_font.render(str(game.player2.score), True, Colors.white)
