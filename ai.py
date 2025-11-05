@@ -1,15 +1,5 @@
 import random
 
-# internal helper function to check if a block's position is valid
-def _check_valid_position(grid, block):
-    tiles = block.get_cell_positions()
-    for tile in tiles:
-        if not grid.is_inside(tile.row, tile.col):
-            return False
-        if not grid.is_empty(tile.row, tile.col):
-            return False
-    return True
-
 # BFS to find all the possible placements for the current block
 def get_all_end_positions(game):
     end_pos = {}
@@ -28,7 +18,7 @@ def get_all_end_positions(game):
         # check if current state is an end placement, add to end positions if so
         test_down = curr_block.clone()
         test_down.move(1, 0)
-        if not _check_valid_position(grid, test_down):
+        if not game.block_fits(test_down):
             end_state = (curr_block.row_offset, curr_block.col_offset, curr_block.rotation_state)
             if end_state not in end_pos:
                 end_pos[end_state] = curr_path
@@ -59,7 +49,7 @@ def get_all_end_positions(game):
 
             new_state = (new_block.row_offset, new_block.col_offset, new_block.rotation_state)
 
-            if _check_valid_position(grid, new_block) and new_state not in checked_pos:
+            if game.block_fits(new_block) and new_state not in checked_pos:
                 checked_pos.add(new_state)
                 queue.append((new_block, new_path))
     

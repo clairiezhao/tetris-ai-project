@@ -37,18 +37,18 @@ class Game:
     
     def move_left(self):
         self.current_block.move(0, -1)
-        if (not self.block_inside()) or (not self.block_fits()):
+        if not self.block_fits(self.current_block):
             self.current_block.move(0, 1)
     
     def move_right(self):
         self.current_block.move(0, 1)
-        if (not self.block_inside()) or (not self.block_fits()):
+        if not self.block_fits(self.current_block):
             self.current_block.move(0, -1)
     
     def move_down(self):
         self.current_block.move(1, 0)
         # if block does not fit completely inside board or block collides with other block
-        if (not self.block_inside()) or (not self.block_fits()):
+        if not self.block_fits(self.current_block):
             self.current_block.move(-1, 0)
             self.lock_block()
 
@@ -63,31 +63,26 @@ class Game:
         # when a block is locked in place, clear all completed rows
         rows_cleared = self.grid.clear_full_rows()
         self.update_score(self.current_player_id, rows_cleared, 0)
-        if not self.block_fits():
+        if not self.block_fits(self.current_block):
             self.game_over = True
         # when a block is locked in place, current player's turn ends
         self.change_players()
 
-    # check if curr block does not collide with any existing block
-    def block_fits(self):
-        tiles = self.current_block.get_cell_positions()
+    # check if a block does not collide with any existing block
+    def block_fits(self, block):
+        tiles = block.get_cell_positions()
         for pos in tiles:
+            if not self.grid.is_inside(pos.row, pos.col):
+                return False
             if not self.grid.is_empty(pos.row, pos.col):
                 return False
         return True
     
     def rotate(self):
-        self.current_block.rotate()
-        if not self.block_inside():
-            self.current_block.undo_rotate()
-    
-    # if any cell is not inside the grid, return false
-    def block_inside(self):
-        tiles = self.current_block.get_cell_positions()
-        for tile in tiles:
-            if not self.grid.is_inside(tile.row, tile.col):
-                return False
-        return True
+        rotate_curr = self.current_block.clone()
+        rotate_curr.rotate()
+        if self.block_fits(rotate_curr):
+            self.current_block.rotate()
     
     def reset(self):
         self.grid.reset()
