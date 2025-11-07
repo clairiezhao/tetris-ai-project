@@ -1,7 +1,6 @@
 from colors import Colors
 import pygame
 from position import Position
-import copy
 
 class Block:
     def __init__(self, id):
