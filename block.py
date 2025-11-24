@@ -34,6 +34,7 @@ class Block:
     
     # ret new positions with applied offset
     def get_cell_positions(self):
+        # get new tiles beased on rotation state
         tiles = self.cells[self.rotation_state]
         moved_tiles = []
         for pos in tiles:

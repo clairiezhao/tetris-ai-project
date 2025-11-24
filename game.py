@@ -20,6 +20,7 @@ class Game:
         self.current_player_id = 0
         self.end_turn = False
 
+    # update score for either player based on # of lines cleared and # of move down points
     def update_score(self, player_id, lines_cleared, move_down_points):
         if player_id == 0:
             self.player1.update_score(lines_cleared, move_down_points)
@@ -72,8 +73,10 @@ class Game:
     def block_fits(self, block):
         tiles = block.get_cell_positions()
         for pos in tiles:
+            # check if tile is within bounds of board
             if not self.grid.is_inside(pos.row, pos.col):
                 return False
+            # checks that all slots are empty
             if not self.grid.is_empty(pos.row, pos.col):
                 return False
         return True

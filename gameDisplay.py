@@ -19,7 +19,7 @@ next_rect = pygame.Rect(320, 315, 170, 180)
 # game window: 300w x 600h pixels
 # offset of 200, 20
 # (0,0) is top left corner
-screen = pygame.display.set_mode((500, 620));
+screen = pygame.display.set_mode((500, 620))
 pygame.display.set_caption("Tetris")
 clock = pygame.time.Clock()
 game = Game()
