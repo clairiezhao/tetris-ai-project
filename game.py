@@ -16,6 +16,9 @@ class Game:
         self.num_players = 2
         self.player1 = Player(0)
         self.player2 = Player(1)
+        self.player1.other_player = self.player2
+        self.player2.other_player = self.player1
+
         # start from player 1
         self.current_player_id = 0
         self.end_turn = False
@@ -107,3 +110,4 @@ class Game:
             self.next_block.draw(screen, 255, 380)
         else:
             self.next_block.draw(screen, 270, 370)
+        

@@ -11,7 +11,6 @@ def get_all_end_positions(game):
     queue = [(start_block, [])] 
     start_state = (game.current_block.row_offset, game.current_block.col_offset, game.current_block.rotation_state)
     checked_pos.add(start_state)
-
     while len(queue) > 0:
         curr_block, curr_path = queue.pop(0)
         

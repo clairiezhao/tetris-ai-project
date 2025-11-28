@@ -2,7 +2,7 @@ import pygame
 import sys
 from game import Game
 from colors import Colors
-import ai
+import ai_expectimax as ai
 
 pygame.init()
 
@@ -37,6 +37,7 @@ ai_path = []
 ai_moving = False
 
 # game loop: event handling, update positions, draw objects
+# game loop: event handling, update positions, draw objects
 while True:
     last_player_id = game.current_player_id
 
@@ -45,38 +46,24 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
         if event.type == pygame.KEYDOWN:
-            if game.game_over == True:
-                    game.game_over = False
-                    game.reset()
-            # player 1 uses arrow keys
-            if(game.current_player_id == 0 and (not game.game_over)):
-                if event.key == pygame.K_LEFT:
-                    game.move_left()
-                if event.key == pygame.K_RIGHT:
-                    game.move_right()
-                if event.key == pygame.K_DOWN:
-                    game.move_down()
-                    game.update_score(game.current_player_id, 0, 1)
-                if event.key == pygame.K_UP:
-                    game.rotate()
-            # player 2 uses a(=LFT), w(=UP), s(=DWN), d=(RGT)
-            # elif((game.current_player_id == 1) and (not game.game_over)):
-            #     if event.key == pygame.K_a :
-            #         game.move_left()
-            #     if event.key == pygame.K_d:
-            #         game.move_right()
-            #     if event.key == pygame.K_s:
-            #         game.move_down()
-            #         game.update_score(game.current_player_id, 0, 1)
-            #     if event.key == pygame.K_w:
-            #         game.rotate()
+            # any key while game_over -> reset game
+            if game.game_over:
+                game.game_over = False
+                game.reset()
+
+            # NOTE: no manual movement controls anymore;
+            # both players are controlled by the AI now.
+
         if event.type == GAME_UPDATE and (not game.game_over):
+            # gravity step
             game.move_down()
 
+            # if there is an AI path for the current player, execute one step
             if ai_path:
                 move = ai_path.pop(0)
-                
+
                 if move == 0:
                     game.move_down()
                 elif move == 1:
@@ -85,14 +72,16 @@ while True:
                     game.move_right()
                 else:
                     game.rotate()
-            # else:
-            #     game.move_down()
-    
+            # if no ai_path, we just rely on gravity (move_down above)
+
+    # check if turn switched (block locked and next player started)
     if game.current_player_id != last_player_id:
-        if game.current_player_id == 1:
-            ai_path = ai.random_move(game)
+        if not game.game_over:
+            # compute next move sequence for the *new* current player (0 or 1)
+            ai_path = ai.expectimax_move(game)
             ai_moving = True
 
+            # if AI can't find a move, end the game
             if not ai_path:
                 game.game_over = True
         else:
