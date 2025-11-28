@@ -10,19 +10,64 @@ import copy
 from ai import get_all_end_positions
 
 
+def board_heuristic(grid):
+    """
+    Heuristic value for the shared board.
+    Negative is bad (tall, holey, bumpy), positive is good.
+    """
+    num_rows = grid.num_rows
+    num_cols = grid.num_cols
+    cells = grid.grid  # 2D list
+
+    heights = [0] * num_cols
+    holes = 0
+
+    # Compute column heights and holes
+    for col in range(num_cols):
+        seen_block = False
+        col_height = 0
+        col_holes = 0
+        for row in range(num_rows):
+            if cells[row][col] != 0:
+                if not seen_block:
+                    seen_block = True
+                    col_height = num_rows - row
+            elif seen_block:
+                # empty cell below a filled cell -> hole
+                col_holes += 1
+        heights[col] = col_height
+        holes += col_holes
+
+    max_height = max(heights)
+    agg_height = sum(heights)
+    bumpiness = sum(abs(heights[c] - heights[c + 1]) for c in range(num_cols - 1))
+
+    # Tune these weights to taste
+    return (
+        -0.5 * agg_height
+        - 0.7 * holes
+        - 0.3 * bumpiness
+        - 0.2 * max_height
+    )
+
+
 def utility(game, root_player_id):
     """
-    Utility function U = myScore - oppScore from the perspective of
-    root_player_id (0 or 1).
-
-    Assumes Game has game.player1 and game.player2, each with .score.
+    U = (myScore - oppScore) + board heuristic.
+    The score term dominates; board heuristic breaks ties / guides early game.
     """
     p1_score = game.player1.score
     p2_score = game.player2.score
     if root_player_id == 0:
-        return p1_score - p2_score
+        score_diff = p1_score - p2_score
     else:
-        return p2_score - p1_score
+        score_diff = p2_score - p1_score
+
+    board_val = board_heuristic(game.grid)
+
+    # Make score difference matter a lot, but still care about board shape
+    return 100 * score_diff + board_val
+
 
 
 def simulate_path(game, path):
@@ -70,41 +115,42 @@ def copy_game(game):
     reasonably deepcopy-able. If you run into issues, you may want
     to implement an explicit Game.clone() method and call that here.
     """
-    return copy.deepcopy(game)
+    return game.clone()
 
 
-def expectimax_value(game, depth, root_player_id):
-    """
-    Recursive expectiminimax-style value function (MAX vs MIN, no explicit
-    chance nodes here; the randomness comes from Game.get_random_block()).
-
-    depth is measured in *plies* (half-moves).
-    """
-    # Terminal or depth limit: evaluate the state.
+def expectimax_value(game, depth, root_player_id, branch_limit=6):
     if depth <= 0 or game.game_over:
         return utility(game, root_player_id)
 
-    # Generate all possible end positions for the *current* block / player.
     moves_dict = get_all_end_positions(game)
-
-    # If no legal moves (should be rare), just evaluate.
     if not moves_dict:
         return utility(game, root_player_id)
 
-    values = []
-
+    # Rank child moves by immediate heuristic and keep only top K
+    scored_children = []
     for path in moves_dict.values():
-        # Work on a copy so we don't mutate the original game state.
         g_copy = copy_game(game)
         g_after = simulate_path(g_copy, path)
-        v = expectimax_value(g_after, depth - 1, root_player_id)
+        score = utility(g_after, root_player_id)
+        scored_children.append((score, path))
+
+    # Sort descending for MAX, ascending for MIN, then cut to branch_limit
+    max_turn = (game.current_player_id == root_player_id)
+    scored_children.sort(key=lambda x: x[0], reverse=max_turn)
+    scored_children = scored_children[:branch_limit]
+
+    values = []
+    for _, path in scored_children:
+        g_copy = copy_game(game)
+        g_after = simulate_path(g_copy, path)
+        v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
         values.append(v)
 
-    # If it is the root player to move, this is a MAX node; otherwise MIN.
-    if game.current_player_id == root_player_id:
+    if max_turn:
         return max(values)
     else:
         return min(values)
+
 
 
 def expectimax_move(game, depth=2):

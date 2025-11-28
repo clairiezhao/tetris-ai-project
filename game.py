@@ -111,3 +111,46 @@ class Game:
         else:
             self.next_block.draw(screen, 270, 370)
         
+    def clone(self):
+        """
+        Create a full game-state clone safe for AI search.
+        Only copies logical state; no pygame/display objects involved.
+        """
+        # 1. Create a new Game instance without calling __init__
+        g = Game.__new__(Game)
+
+        # 2. Clone grid
+        g.grid = Grid()
+        g.grid.grid = [row[:] for row in self.grid.grid]
+
+        # 3. Clone remaining bag of blocks (7-bag)
+        #    Each element in self.blocks is an IBlock/JBlock/etc. instance.
+        #    Those classes already support .clone() because rotate() uses clone().
+        g.blocks = [b.clone() for b in self.blocks]
+
+        # 4. Clone current and next blocks
+        g.current_block = self.current_block.clone() if self.current_block is not None else None
+        g.next_block = self.next_block.clone() if self.next_block is not None else None
+
+        # 5. Copy basic game flags / fields
+        g.game_over = self.game_over
+        g.score = self.score
+
+        # 6. Multiplayer attributes
+        g.num_players = self.num_players
+
+        g.player1 = Player(0)
+        g.player1.score = self.player1.score
+
+        g.player2 = Player(1)
+        g.player2.score = self.player2.score
+
+        # Re-link the cross references
+        g.player1.other_player = g.player2
+        g.player2.other_player = g.player1
+
+        g.current_player_id = self.current_player_id
+        g.end_turn = self.end_turn
+
+        return g
+
