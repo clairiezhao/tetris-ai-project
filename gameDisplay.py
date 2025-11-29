@@ -70,8 +70,10 @@ while True:
                     game.move_left()
                 elif move == 2:
                     game.move_right()
-                else:
+                elif move == 3:
                     game.rotate()
+                else:
+                    pass
             # if no ai_path, we just rely on gravity (move_down above)
 
     # check if turn switched (block locked and next player started)
