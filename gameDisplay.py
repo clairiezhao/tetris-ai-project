@@ -11,9 +11,9 @@ score1_bg_surface = title_font.render("Player 1", True, Colors.white)
 score2_bg_surface = title_font.render("Player 2", True, Colors.white)
 next_bg_surface = title_font.render("Next", True, Colors.white)
 game_over_surface = title_font.render("GAME OVER", True, Colors.white)
-score1_rect = pygame.Rect(320, 55, 170, 60)
-score2_rect = pygame.Rect(320, 165, 170, 60)
-next_rect = pygame.Rect(320, 315, 170, 180)
+score1_rect = pygame.Rect(320, 155, 170, 60)
+score2_rect = pygame.Rect(320, 265, 170, 60)
+next_rect = pygame.Rect(320, 415, 170, 180)
 
 
 # game window: 300w x 600h pixels
@@ -92,11 +92,11 @@ while True:
     score1_surface = title_font.render(str(game.player1.score), True, Colors.white)
     score2_surface = title_font.render(str(game.player2.score), True, Colors.white)
     screen.fill(Colors.dark_blue)
-    screen.blit(score1_bg_surface, (350, 20, 50, 50))
-    screen.blit(score2_bg_surface, (350, 130, 50, 50))
-    screen.blit(next_bg_surface, (375, 280, 50, 50))
+    screen.blit(score1_bg_surface, (350, 120, 50, 50))
+    screen.blit(score2_bg_surface, (350, 230, 50, 50))
+    screen.blit(next_bg_surface, (375, 380, 50, 50))
     if game.game_over:
-        screen.blit(game_over_surface, (320, 500, 50, 50))
+        screen.blit(game_over_surface, (320, 600, 50, 50))
 
     # scoreboards
     pygame.draw.rect(screen, Colors.light_blue, score1_rect, 0, 10)
