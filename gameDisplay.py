@@ -7,10 +7,11 @@ import ai_expectimax as ai
 pygame.init()
 
 title_font = pygame.font.Font(None, 40)
+game_over_font = pygame.font.Font(None, 60)
 score1_bg_surface = title_font.render("Player 1", True, Colors.white)
 score2_bg_surface = title_font.render("Player 2", True, Colors.white)
 next_bg_surface = title_font.render("Next", True, Colors.white)
-game_over_surface = title_font.render("GAME OVER", True, Colors.white)
+game_over_surface = game_over_font.render("GAME OVER", True, Colors.white)
 score1_rect = pygame.Rect(320, 155, 170, 60)
 score2_rect = pygame.Rect(320, 265, 170, 60)
 next_rect = pygame.Rect(320, 415, 170, 180)
@@ -22,6 +23,9 @@ next_rect = pygame.Rect(320, 415, 170, 180)
 screen = pygame.display.set_mode((500, 620))
 pygame.display.set_caption("Tetris")
 clock = pygame.time.Clock()
+# game duration 2 mins in ms
+game_duration = 120000
+start_time = pygame.time.get_ticks()
 game = Game()
 
 # USEREVENT = custom event
@@ -38,7 +42,19 @@ ai_moving = False
 
 # game loop: event handling, update positions, draw objects
 # game loop: event handling, update positions, draw objects
+
 while True:
+    screen.fill(Colors.dark_blue)
+    remaining_time = game_duration - pygame.time.get_ticks() + start_time
+    if remaining_time <= 0:
+        game.game_over = True
+    remaining_time = (int)(remaining_time / 1000)
+    timer_surface = title_font.render(str(remaining_time), True, Colors.white)
+    timer_rect = pygame.Rect(320, 35, 170, 60)
+    pygame.draw.rect(screen, Colors.light_blue, timer_rect, 0, 10)
+    screen.blit(timer_surface, timer_surface.get_rect(centerx = timer_rect.centerx, centery = timer_rect.centery))
+
+
     last_player_id = game.current_player_id
 
     for event in pygame.event.get():
@@ -85,7 +101,7 @@ while True:
 
             # if AI can't find a move, end the game
             if not ai_path:
-                game.game_over = True
+                game.board_full = True
         else:
             ai_path = []
             ai_moving = False
@@ -93,12 +109,10 @@ while True:
     # ui graphics
     score1_surface = title_font.render(str(game.player1.score), True, Colors.white)
     score2_surface = title_font.render(str(game.player2.score), True, Colors.white)
-    screen.fill(Colors.dark_blue)
+    
     screen.blit(score1_bg_surface, (350, 120, 50, 50))
     screen.blit(score2_bg_surface, (350, 230, 50, 50))
     screen.blit(next_bg_surface, (375, 380, 50, 50))
-    if game.game_over:
-        screen.blit(game_over_surface, (320, 600, 50, 50))
 
     # scoreboards
     pygame.draw.rect(screen, Colors.light_blue, score1_rect, 0, 10)
@@ -109,6 +123,12 @@ while True:
     # next block
     pygame.draw.rect(screen, Colors.light_blue, next_rect, 0, 10)
     game.draw(screen)
+    if game.game_over:
+        screen.blit(game_over_surface, (35, 275, 50, 50))
+    # if board full, clear board
+    elif game.board_full:
+        game.clear_board()
+
 
     pygame.display.update()
     # fps = 60

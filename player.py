@@ -1,9 +1,11 @@
 class Player:
-    def __init__(self, id):
+    def __init__(self, id, color):
         # 0 or 1 for two player
         self.id = id
         self.score = 0
         self.other_player = None
+        # red for 0, blue for 1
+        self.color = color
 
     def update_score(self, lines_cleared, move_down_points):
         if lines_cleared == 1:
