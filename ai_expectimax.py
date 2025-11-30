@@ -128,7 +128,8 @@ def expectimax_value(game, depth, root_player_id, branch_limit=6):
 
     # Rank child moves by immediate heuristic and keep only top K
     scored_children = []
-    for path in moves_dict.values():
+    for item in moves_dict:
+        path = item[1]
         g_copy = copy_game(game)
         g_after = simulate_path(g_copy, path)
         score = utility(g_after, root_player_id)
@@ -173,7 +174,8 @@ def expectimax_move(game, depth=2):
     best_value = None
     best_path = None
 
-    for path in moves_dict.values():
+    for item in moves_dict:
+        path = item[1]
         g_copy = copy_game(game)
         g_after = simulate_path(g_copy, path)
         value = expectimax_value(g_after, depth - 1, root_player_id)
