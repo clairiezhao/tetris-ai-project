@@ -147,7 +147,7 @@ def expectimax_value(game, depth, root_player_id, branch_limit=6):
         g_copy = copy_game(game)
         g_after, lines_cleared = simulate_path(g_copy, path)
         score = utility(g_after, root_player_id, lines_cleared)
-        scored_children.append((score, path))
+        scored_children.append((score, path, lines_cleared))
 
     # Sort descending for MAX, ascending for MIN, then cut to branch_limit
     max_turn = (game.current_player_id == root_player_id)
@@ -155,10 +155,12 @@ def expectimax_value(game, depth, root_player_id, branch_limit=6):
     scored_children = scored_children[:branch_limit]
 
     values = []
-    for _, path in scored_children:
+    for _, path, lines_cleared in scored_children:
         g_copy = copy_game(game)
-        g_after, lines_cleared = simulate_path(g_copy, path)
+        g_after, next_lines = simulate_path(g_copy, path)
         v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
+        if max_turn:
+            v += 10000 * lines_cleared
         values.append(v)
 
     if max_turn:
@@ -184,6 +186,18 @@ def expectimax_move(game, depth=2):
     moves_dict = get_all_end_positions(game)
     if not moves_dict:
         return None
+    
+    best_moves = []
+    for item in moves_dict:
+        path = item[1]
+        g_copy = copy_game(game)
+        g_after, lines_cleared = simulate_path(g_copy, path)
+        if lines_cleared > 0:
+            best_moves.append((lines_cleared, path))
+
+    if best_moves:
+        # Pick the move that clears the most lines
+        return max(best_moves, key=lambda x: x[0])[1]
 
     best_value = None
     best_path = None
@@ -194,6 +208,7 @@ def expectimax_move(game, depth=2):
         g_after, lines_cleared = simulate_path(g_copy, path)
         
         value = expectimax_value(g_after, depth - 1, root_player_id)
+        value += 10000 * lines_cleared
 
         if (best_value is None) or (value > best_value):
             best_value = value

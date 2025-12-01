@@ -75,7 +75,6 @@ def utility(game, root_player_id, lines_cleared):
     return 0.5 * score_diff + board_val + lines_val 
 
 
-
 def simulate_path(game, path):
     """
     Given a *copy* of Game and a move path (as produced by get_all_end_positions),
@@ -233,7 +232,7 @@ def minimax_move(game, depth=3, branch_limit=8):
     
     # If move clears lines, always choose most lines cleared
     if best_lines > 0:
-        best_moves.sort(key=lambda x: x[2], reverse=True)
+        best_moves.sort(key=lambda x: (x[2], board_heuristic(x[1].grid, x[2])), reverse=True)
         return best_moves[0][0]
     
     # Otherwise, run minimax 
