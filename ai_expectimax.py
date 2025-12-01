@@ -208,7 +208,6 @@ def expectimax_move(game, depth=2):
         g_after, lines_cleared = simulate_path(g_copy, path)
         
         value = expectimax_value(g_after, depth - 1, root_player_id)
-        value += 10000 * lines_cleared
 
         if (best_value is None) or (value > best_value):
             best_value = value
