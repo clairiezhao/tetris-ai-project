@@ -10,7 +10,7 @@ import copy
 from ai import get_all_end_positions
 
 
-def board_heuristic(grid):
+def board_heuristic(grid, lines_cleared):
     """
     Heuristic value for the shared board.
     Negative is bad (tall, holey, bumpy), positive is good.
@@ -44,14 +44,15 @@ def board_heuristic(grid):
 
     # Tune these weights to taste
     return (
-        -0.5 * agg_height
+        10000 * lines_cleared
+        - 0.5 * agg_height
         - 0.7 * holes
         - 0.3 * bumpiness
         - 0.2 * max_height
     )
 
 
-def utility(game, root_player_id):
+def utility(game, root_player_id, lines_cleared):
     """
     U = (myScore - oppScore) + board heuristic.
     The score term dominates; board heuristic breaks ties / guides early game.
@@ -63,7 +64,7 @@ def utility(game, root_player_id):
     else:
         score_diff = p2_score - p1_score
 
-    board_val = board_heuristic(game.grid)
+    board_val = board_heuristic(game.grid, lines_cleared)
 
     # Make score difference matter a lot, but still care about board shape
     return 100 * score_diff + board_val
@@ -85,6 +86,8 @@ def simulate_path(game, path):
     # block has locked and the turn has switched.
     start_player_id = game.current_player_id
 
+    initial_score = game.player1.score if start_player_id == 0 else game.player2.score
+
     # Apply the scripted moves.
     for move in path:
         if game.game_over:
@@ -104,7 +107,18 @@ def simulate_path(game, path):
     while (not game.game_over) and (game.current_player_id == start_player_id):
         game.move_down()
 
-    return game
+    final_score = game.player1.score if start_player_id == 0 else game.player2.score
+    lines_cleared = 0
+    if final_score - initial_score == 40:
+        lines_cleared = 1
+    elif final_score - initial_score == 100:
+        lines_cleared = 2
+    elif final_score - initial_score == 300:
+        lines_cleared = 3
+    elif final_score - initial_score == 1200:
+        lines_cleared = 4
+
+    return game, lines_cleared
 
 
 def copy_game(game):
@@ -120,19 +134,19 @@ def copy_game(game):
 
 def expectimax_value(game, depth, root_player_id, branch_limit=6):
     if depth <= 0 or game.game_over:
-        return utility(game, root_player_id)
+        return utility(game, root_player_id, 0)
 
     moves_dict = get_all_end_positions(game)
     if not moves_dict:
-        return utility(game, root_player_id)
+        return utility(game, root_player_id, 0)
 
     # Rank child moves by immediate heuristic and keep only top K
     scored_children = []
     for item in moves_dict:
         path = item[1]
         g_copy = copy_game(game)
-        g_after = simulate_path(g_copy, path)
-        score = utility(g_after, root_player_id)
+        g_after, lines_cleared = simulate_path(g_copy, path)
+        score = utility(g_after, root_player_id, lines_cleared)
         scored_children.append((score, path))
 
     # Sort descending for MAX, ascending for MIN, then cut to branch_limit
@@ -143,7 +157,7 @@ def expectimax_value(game, depth, root_player_id, branch_limit=6):
     values = []
     for _, path in scored_children:
         g_copy = copy_game(game)
-        g_after = simulate_path(g_copy, path)
+        g_after, lines_cleared = simulate_path(g_copy, path)
         v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
         values.append(v)
 
@@ -177,7 +191,8 @@ def expectimax_move(game, depth=2):
     for item in moves_dict:
         path = item[1]
         g_copy = copy_game(game)
-        g_after = simulate_path(g_copy, path)
+        g_after, lines_cleared = simulate_path(g_copy, path)
+        
         value = expectimax_value(g_after, depth - 1, root_player_id)
 
         if (best_value is None) or (value > best_value):
