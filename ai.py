@@ -1,10 +1,8 @@
 import random
-import copy
 import torch
 import torch.nn as nn
 
-# --- 1. THE BRAIN STRUCTURE (DQN Class) ---
-# This must match the class in train_dqn.py exactly.
+# dqn class
 class DQN(nn.Module):
     def __init__(self, input_size, output_size):
         super(DQN, self).__init__()
@@ -19,10 +17,10 @@ class DQN(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-# --- 2. GLOBAL MODEL LOADING ---
+# load the model
 trained_model = None
 
-def load_model(filepath="tetris_dqn.pth"):
+def load_model(filepath="trained_dqn.pth"):
     global trained_model
     try:
         model = DQN(7, 1) 
@@ -37,14 +35,13 @@ def load_model(filepath="tetris_dqn.pth"):
         print("Model size mismatch, wrong number of features.")
         trained_model = None
 
-# --- 3. FEATURE EXTRACTION ---
+# feature extraction
 def get_features(grid, opponent_block=None):
     """
     Analyzes the grid and returns 7 features:
     [AggHeight, Holes, Bumpiness, Lines, MaxHeight, Wells, OppMaxLines]
     """
     
-    # --- A. Basic Column Data ---
     heights = []
     for c in range(grid.num_cols):
         h = 0
@@ -54,18 +51,18 @@ def get_features(grid, opponent_block=None):
                 break
         heights.append(h)
 
-    # 1. Aggregate Height
+    # Aggregate Height
     aggregate_height = sum(heights)
 
-    # 2. Bumpiness
+    # Bumpiness
     bumpiness = 0
     for i in range(len(heights) - 1):
         bumpiness += abs(heights[i] - heights[i+1])
 
-    # 3. Max Height
+    # Max Height
     max_height = max(heights) if heights else 0
 
-    # 4. Holes
+    # Holes
     holes = 0
     for c in range(grid.num_cols):
         block_found = False
@@ -75,7 +72,7 @@ def get_features(grid, opponent_block=None):
             elif block_found and grid.grid[r][c] == 0:
                 holes += 1
                 
-    # 5. Cumulative Wells
+    # Cumulative Wells
     wells = 0
     for c in range(grid.num_cols):
         if c == 0: left_h = grid.num_rows 
@@ -88,66 +85,59 @@ def get_features(grid, opponent_block=None):
             depth = min(left_h, right_h) - heights[c]
             wells += depth
 
-    # 6. Complete Lines (Self)
+    # Complete Lines (Self)
     complete_lines = 0
     for r in range(grid.num_rows):
         if all(grid.grid[r][c] != 0 for c in range(grid.num_cols)):
             complete_lines += 1
 
-    # --- ADVERSARIAL FEATURES ---
+    # adversarial features
     opponent_max_lines = 0
-    opponent_safe_moves = 0
     
     if opponent_block:
-        # We simulate dropping the opponent's block in every possible column/rotation
-        # This is a "Mock Drop" - fast estimation without full pathfinding
-        
-        # 1. Check all 4 rotations
+        # simulate dropping the opponent[s block in every possible column/rotation
+
+        # check all 4 rotations
         for rot in range(4):
             temp_block = opponent_block.clone()
-            # Rotate to state 'rot'
             for _ in range(rot):
                 temp_block.rotate()
             
-            # 2. Check all valid columns
-            # We iterate roughly from -2 to width to cover all edge cases
+            # check all valid columns
             for col in range(-2, grid.num_cols):
                 temp_block.col_offset = col
-                temp_block.row_offset = 0 # Start at top
+                temp_block.row_offset = 0
                 
-                # Check if this X position is valid at the top
+                # check if starting position is valid at the top
                 if not _check_valid_position(grid, temp_block):
                     continue
                     
-                # 3. Drop it! (Find landing row)
-                # Quick drop simulation
+                # drop simulation
                 landed = False
                 for r in range(grid.num_rows):
                     temp_block.row_offset = r
                     if not _check_valid_position(grid, temp_block):
-                        temp_block.row_offset = r - 1 # Back up one step
+                        temp_block.row_offset = r - 1 # up one step
                         landed = True
                         break
                 
                 if not landed: 
-                    # Block fit all the way to bottom (unlikely but possible)
+                    # block landed on row 0
                     temp_block.row_offset = grid.num_rows - 1
 
-                # If the final position is valid (didn't spawn colliding)
+                # if the final position is valid
                 if _check_valid_position(grid, temp_block):
-                    
-                    # A. Calculate Lines this move would clear
-                    # We check which rows the block occupies
+                    # calculate lines this move would clear
+                    # check which rows the block occupies
                     tiles = temp_block.get_cell_positions()
                     lines_cleared_opp = 0
                     rows_affected = set(t.row for t in tiles)
                     
                     for r_check in rows_affected:
-                        # Check if row is full (considering the existing grid + new block parts)
+                        # check if row is full
                         row_full = True
                         for c_check in range(grid.num_cols):
                             cell_filled = (grid.grid[r_check][c_check] != 0)
-                            # Or if the temp block fills it
                             for t in tiles:
                                 if t.row == r_check and t.col == c_check:
                                     cell_filled = True
@@ -160,31 +150,9 @@ def get_features(grid, opponent_block=None):
                     if lines_cleared_opp > opponent_max_lines:
                         opponent_max_lines = lines_cleared_opp
 
-                    # B. Check if it's a "Safe Move" (Creates no holes)
-                    # A hole is created if an empty block is covered
-                    creates_hole = False
-                    for t in tiles:
-                        # Check cells directly below the block parts
-                        # If below is empty and valid, we created a hole
-                        below_r = t.row + 1
-                        if below_r < grid.num_rows:
-                            # Is the cell below empty in the grid?
-                            if grid.grid[below_r][t.col] == 0:
-                                # Is the cell below ALSO part of the block?
-                                below_is_block = False
-                                for t2 in tiles:
-                                    if t2.row == below_r and t2.col == t.col:
-                                        below_is_block = True
-                                if not below_is_block:
-                                    creates_hole = True
-                                    break
-                    
-                    if not creates_hole:
-                        opponent_safe_moves += 1
     return [aggregate_height, holes, bumpiness, complete_lines, max_height, wells, opponent_max_lines]
-    return [aggregate_height, holes, bumpiness, complete_lines, max_height, wells, opponent_max_lines, opponent_safe_moves]
 
-# --- 4. HELPER FUNCTIONS ---
+# helper functions
 def _check_valid_position(grid, block):
     tiles = block.get_cell_positions()
     for tile in tiles:
@@ -271,16 +239,16 @@ def get_best_move(game):
     best_path = None
     
     for block, path in possible_moves:
-        # Create temp grid data
+        # create temp grid data
         temp_grid_data = [row[:] for row in game.grid.grid]
         tiles = block.get_cell_positions()
         
-        # Place block
+        # place block
         for tile in tiles:
              if 0 <= tile.row < len(temp_grid_data) and 0 <= tile.col < len(temp_grid_data[0]):
                 temp_grid_data[tile.row][tile.col] = block.id
         
-        # Mock grid object for get_features
+        # mock grid object for get_features
         class MockGrid:
             def __init__(self, data):
                 self.grid = data

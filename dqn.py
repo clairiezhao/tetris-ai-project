@@ -3,9 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 import numpy as np
-import copy
 import os
-import sys
 import pygame 
 from collections import deque
 from game import Game
@@ -25,11 +23,11 @@ NUM_EPISODES = 3000
 MAX_STEPS_PER_EPISODE = 1000 
 CHECKPOINT_FILE = "training_checkpoint.pth"
 
-# --- VISUALIZATION SETTINGS ---
+# set VISUAL_MODE to true if you want to see the training happening on the grid
 VISUAL_MODE = True      
-RENDER_SPEED = 10       
+RENDER_SPEED = 10
 
-# --- Curriculum Settings ---
+# considered having it train with normal tetris (1 player) to learn how to 
 SINGLE_PLAYER_EPISODES = 0
 
 class DQN(nn.Module):
@@ -149,8 +147,8 @@ def draw_visuals(screen, game, episode, survived, reward, eps):
         
     pygame.display.update()
 
-# --- Main Training Loop ---
-policy_net = DQN(7, 1) 
+# main training loop
+policy_net = DQN(7, 1)
 target_net = DQN(7, 1)
 optimizer = optim.Adam(policy_net.parameters(), lr=LEARNING_RATE)
 memory = ReplayMemory(MEMORY_SIZE)
@@ -173,14 +171,14 @@ else:
 
 target_net.eval()
 
-# --- Initialize Pygame for Visuals ---
+# only if you want to see the training happening
 if VISUAL_MODE:
     pygame.init()
     screen = pygame.display.set_mode((500, 620))
     pygame.display.set_caption("DQN Training Observer")
     clock = pygame.time.Clock()
 
-print("Starting Curriculum Training (Ctrl+C to Save and Quit)...")
+print("Starting Training (Ctrl+C to Save and Quit)...")
 
 try:
     for episode in range(start_episode, NUM_EPISODES):
@@ -215,7 +213,7 @@ try:
             steps_done += 1
             episode_steps += 1
             
-            # --- PLAYER 1 (AI AGENT) ---
+            # player 1 (the one training)
             if game.current_player_id == 0:
                 block, path, chosen_state_features = get_best_action(game, policy_net, epsilon)
                 
@@ -228,14 +226,13 @@ try:
                         game.game_over = True
                         reward = -20
                     else:
-                        # Index 3 in features is "Complete Lines"
                         lines = int(chosen_state_features[3].item())
                         
                         total_lines_cleared += lines
                         
-                        # Reward Shaping
+                        # rewards and punishments
                         survival_bonus = 1.0
-                        height_penalty = chosen_state_features[4].item() * 0.05
+                        height_penalty = chosen_state_features[4].item() * 0.5
                         reward = (lines ** 2) * 50 + survival_bonus - height_penalty
                         
                         if game.game_over:
@@ -256,7 +253,7 @@ try:
                     if last_state_features is not None:
                         memory.push(last_state_features, None, reward, True)
 
-            # --- PLAYER 2 (SELF-PLAY OPPONENT) ---
+            # player 2 (opponent, it's playing against itself)
             elif game.current_player_id == 1:
                  block, path, _ = get_best_action(game, policy_net, epsilon)
                  if block:
