@@ -42,14 +42,13 @@ def board_heuristic(grid, lines_cleared):
     agg_height = sum(heights)
     bumpiness = sum(abs(heights[c] - heights[c + 1]) for c in range(num_cols - 1))
 
-    line_score = [0, 40, 100, 300, 1200]
     # Tune these weights to taste
     return (
-        20000 * line_score[lines_cleared]
-        - 0.5 * agg_height
-        - 1.0 * holes
-        - 0.3 * bumpiness
-        - 0.8 * max_height
+        10000 * lines_cleared
+        - 5 * agg_height
+        - 200 * holes
+        - 3 * bumpiness
+        - 15 * max_height
     )
 
 
@@ -159,7 +158,7 @@ def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8
             if depth == 1 or g_after.game_over:
                 child_val = utility(g_after, root_player_id, lines_cleared)
             else:
-                child_val = minimax_value(g_after, depth - 1, root_player_id)
+                child_val = minimax_value(g_after, depth - 1, root_player_id, False, branch_limit, alpha, beta)
             
             value = max(value, child_val)
             alpha = max(alpha, value)
@@ -170,7 +169,7 @@ def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8
         value = 1e18
         for _, path, g_after, lines_cleared in scored_children:
             if depth == 1 or g_after.game_over:
-                child_val = utility(g_after, root_player_id, lines_cleared)
+                child_val = -utility(g_after, root_player_id, lines_cleared)
             else:
                 child_val = minimax_value(g_after, depth - 1, root_player_id, True, branch_limit, alpha, beta)
 
@@ -179,24 +178,6 @@ def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8
             if alpha >= beta:
                 break 
         return value
-
-    # # Sort descending for MAX, ascending for MIN, then cut to branch_limit
-    # max_turn = (game.current_player_id == root_player_id)
-    # scored_children.sort(key=lambda x: x[0], reverse=max_turn)
-    # scored_children = scored_children[:branch_limit]
-
-    # values = []
-    # for _, path in scored_children:
-    #     g_copy = copy_game(game)
-    #     g_after, lines_cleared = simulate_path(g_copy, path)
-    #     v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
-    #     values.append(v)
-
-    # if max_turn:
-    #     return max(values)
-    # else:
-    #     return min(values)
-
 
 def minimax_move(game, depth=3, branch_limit=8):
     """
@@ -232,7 +213,7 @@ def minimax_move(game, depth=3, branch_limit=8):
     if best_lines > 0:
         return random.choice([path for path, _, _ in best_moves])
     
-    best_value = None
+    best_value = -1e18
     best_path = None
 
     children = []
