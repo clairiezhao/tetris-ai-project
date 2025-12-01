@@ -24,7 +24,7 @@ MAX_STEPS_PER_EPISODE = 1000
 CHECKPOINT_FILE = "training_checkpoint.pth"
 
 # set VISUAL_MODE to true if you want to see the training happening on the grid
-VISUAL_MODE = True      
+VISUAL_MODE = False
 RENDER_SPEED = 10
 
 # considered having it train with normal tetris (1 player) to learn how to 

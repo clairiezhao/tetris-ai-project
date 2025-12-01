@@ -52,6 +52,7 @@ while True:
     remaining_time = game_duration - pygame.time.get_ticks() + start_time
     if remaining_time <= 0:
         game.game_over = True
+        remaining_time = 0
     remaining_time = (int)(remaining_time / 1000)
     timer_surface = title_font.render(str(remaining_time), True, Colors.white)
     timer_rect = pygame.Rect(320, 35, 170, 60)
@@ -101,8 +102,8 @@ while True:
         if not game.game_over:
             # compute next move sequence for the *new* current player (0 or 1)
             # ai_path = expectimax.expectimax_move(game) # if you want to test expectimax use this
-            ai_path = minimax.minimax_move(game) # if you want to test minimax use this
-            # ai_path = ai.get_best_move(game) # if you want to test RL use this
+            # ai_path = minimax.minimax_move(game) # if you want to test minimax use this
+            ai_path = ai.get_best_move(game) # if you want to test RL use this
             ai_moving = True
 
             # if AI can't find a move, end the game
