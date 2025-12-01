@@ -2,6 +2,7 @@
 
 import random
 import copy
+from math import inf
 
 # We reuse the BFS-based move generator from the existing ai.py module.
 # get_all_end_positions(game) returns a dict mapping final block states
@@ -44,30 +45,51 @@ def board_heuristic(grid, lines_cleared):
 
     # Tune these weights to taste
     return (
-        10000 * lines_cleared
-        - 5 * agg_height
-        - 200 * holes
-        - 3 * bumpiness
-        - 15 * max_height
+        50 * lines_cleared
+        - 0.5 * agg_height
+        - 2 * holes
+        - 0.3 * bumpiness
+        - 1.5 * max_height
     )
 
 
 def utility(game, root_player_id, lines_cleared):
     """
-    U = (myScore - oppScore) + board heuristic.
-    The score term dominates; board heuristic breaks ties / guides early game.
+    U = weight * (myScore - oppScore) + board heuristic.
     """
     p1_score = game.player1.score
     p2_score = game.player2.score
     if root_player_id == 0:
         score_diff = p1_score - p2_score
+        player = game.player1
+        opponent = game.player2
     else:
         score_diff = p2_score - p1_score
+        player = game.player2
+        opponent = game.player1
 
     board_val = board_heuristic(game.grid, lines_cleared)
 
+    # Dynamically prioritize lines cleared depending on place in the game
+    lines_val = 50 * lines_cleared
+    if player.score + p2_score < 500:
+        lines_val *= 2
+
+    opp_val = 0
+    if game.next_block is not None:
+        moves_dict = get_all_end_positions(game)
+        if moves_dict:
+            max_opp_score = -inf
+            for item in moves_dict:
+                path = item[1]
+                g_copy = copy_game(game)
+                g_after, opp_lines_cleared = simulate_path(g_copy, path)
+                score = board_heuristic(g_after.grid, opp_lines_cleared)
+                max_opp_score = max(max_opp_score, score)
+            opp_val = 0.5 * max_opp_score
+
     # Make score difference matter a lot, but still care about board shape
-    return 500 * score_diff + board_val
+    return 0.5 * score_diff + board_val + lines_val - opp_val
 
 
 
@@ -86,6 +108,7 @@ def simulate_path(game, path):
     # block has locked and the turn has switched.
     start_player_id = game.current_player_id
 
+    # Track previous score
     initial_score = game.player1.score if start_player_id == 0 else game.player2.score
 
     # Apply the scripted moves.
@@ -107,6 +130,7 @@ def simulate_path(game, path):
     while (not game.game_over) and (game.current_player_id == start_player_id):
         game.move_down()
 
+    # Calculate lines cleared using previous score and final score
     final_score = game.player1.score if start_player_id == 0 else game.player2.score
     lines_cleared = 0
     if final_score - initial_score == 40:
@@ -132,7 +156,12 @@ def copy_game(game):
     return game.clone()
 
 
-def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8, alpha=-1e18, beta=1e18):
+def minimax_value(game, depth, root_player_id, maximizing, branch_limit=8, alpha=-inf, beta=inf):
+    """
+    Recursive minimax with alpha-beta pruning
+
+    maximizing is True if it's player's move (maximize score), False if it's opponent's move (minimize score)
+    """
     if depth <= 0 or game.game_over:
         return utility(game, root_player_id, 0)
 
@@ -149,12 +178,14 @@ def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8
         score = utility(g_after, root_player_id, lines_cleared)
         scored_children.append((score, path, g_after, lines_cleared))
 
-    scored_children.sort(key=lambda x: x[0], reverse=maximizing_player)
+    # Sort descending for MAX, ascending for MIN, then cut to branch_limit
+    scored_children.sort(key=lambda x: x[0], reverse=maximizing)
     scored_children = scored_children[:branch_limit]
 
-    if maximizing_player:
-        value = -1e18
-        for _, path, g_after, lines_cleared in scored_children:
+    # Max player
+    if maximizing:
+        value = -inf
+        for _, _, g_after, lines_cleared in scored_children:
             if depth == 1 or g_after.game_over:
                 child_val = utility(g_after, root_player_id, lines_cleared)
             else:
@@ -165,11 +196,11 @@ def minimax_value(game, depth, root_player_id, maximizing_player, branch_limit=8
             if alpha >= beta:
                 break
         return value
-    else: 
-        value = 1e18
-        for _, path, g_after, lines_cleared in scored_children:
+    else: # Min player
+        value = inf
+        for _, _, g_after, lines_cleared in scored_children:
             if depth == 1 or g_after.game_over:
-                child_val = -utility(g_after, root_player_id, lines_cleared)
+                child_val = utility(g_after, root_player_id, lines_cleared)
             else:
                 child_val = minimax_value(g_after, depth - 1, root_player_id, True, branch_limit, alpha, beta)
 
@@ -184,7 +215,7 @@ def minimax_move(game, depth=3, branch_limit=8):
     Top-level decision function.
 
     Returns the move-path (same format as ai.random_move) that maximizes
-    the expectimax value from the perspective of the *current* player.
+    the minimax value from the perspective of the *current* player.
 
     depth controls how many plies (half-moves) to look ahead.
     depth = 1  -> greedy, looks only at immediate outcome of this block.
@@ -196,6 +227,7 @@ def minimax_move(game, depth=3, branch_limit=8):
     if not moves_dict:
         return None
 
+    # Prioritize immediate line clears
     best_lines = -1
     best_moves = []
 
@@ -209,13 +241,21 @@ def minimax_move(game, depth=3, branch_limit=8):
             best_moves = [(path, g_after, lines_cleared)]
         elif lines_cleared == best_lines:
             best_moves.append((path, g_after, lines_cleared))
-
-    if best_lines > 0:
-        return random.choice([path for path, _, _ in best_moves])
     
-    best_value = -1e18
-    best_path = None
+    # If move clears 2+ lines, always choose it
+    if best_lines >= 2:
+        return random.choice([path for path, _, _ in best_moves])
 
+    # If move clears 1 line,run minimax but heavily weight the value
+    if best_lines == 1:
+        line_value = []
+        for path, g_after, lines in best_moves:
+            val = minimax_value(g_after, depth - 1, root_player_id, False, branch_limit)
+            line_value.append((val + 100, path))  
+        line_value.sort(reverse=True)
+        return line_value[0][1]
+    
+    # Otherwise, run minimax 
     children = []
     for item in moves_dict:
         path = item[1]
@@ -227,9 +267,11 @@ def minimax_move(game, depth=3, branch_limit=8):
     children.sort(key=lambda x: x[0], reverse=True)
     children = children[:branch_limit]
 
+    best_value = -inf
+    best_path = None
     for _, path, g_after, lines_cleared in children:
         val = minimax_value(g_after, depth - 1, root_player_id, False, branch_limit)
-        if (best_value is None) or (val > best_value):
+        if val > best_value:
             best_value = val
             best_path = path
 
