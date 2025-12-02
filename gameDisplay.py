@@ -100,8 +100,13 @@ while True:
     # check if turn switched (block locked and next player started)
     if game.current_player_id != last_player_id:
         if not game.game_over:
+            if game.current_player_id == 0:
+                # ai_path = expectimax.expectimax_move(game)
+                ai_path = minimax.minimax_move(game)
+            else:
+                ai_path = ai.get_best_move(game)
             # compute next move sequence for the *new* current player (0 or 1)
-            ai_path = expectimax.expectimax_move(game) # if you want to test expectimax use this
+            # ai_path = expectimax.expectimax_move(game) # if you want to test expectimax use this
             # ai_path = minimax.minimax_move(game) # if you want to test minimax use this
             # ai_path = ai.get_best_move(game) # if you want to test RL use this
             ai_moving = True
