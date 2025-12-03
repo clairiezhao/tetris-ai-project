@@ -154,20 +154,37 @@ def expectimax_value(game, depth, root_player_id, branch_limit=6):
     scored_children.sort(key=lambda x: x[0], reverse=max_turn)
     scored_children = scored_children[:branch_limit]
 
-    values = []
-    for _, path, lines_cleared in scored_children:
-        g_copy = copy_game(game)
-        g_after, next_lines = simulate_path(g_copy, path)
-        v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
-        if max_turn:
-            v += 10000 * lines_cleared
-        values.append(v)
+    # values = []
+    # for _, path, lines_cleared in scored_children:
+    #     g_copy = copy_game(game)
+    #     g_after, next_lines = simulate_path(g_copy, path)
+    #     v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
+    #     if max_turn:
+    #         v += 10000 * lines_cleared
+    #     values.append(v)
+
+    # if max_turn:
+    #     return max(values)
+    # else:
+    #     return min(values)
 
     if max_turn:
-        return max(values)
+        best_value = None
+        for _, path, lines_cleared in scored_children:
+            g_copy = copy_game(game)
+            g_after, _ = simulate_path(g_copy, path)
+            v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
+            v += 10000 * lines_cleared
+            best_value = max(best_value, v)
+        return best_value
     else:
-        return min(values)
-
+        total_value = 0
+        for _, path, _ in scored_children:
+            g_copy = copy_game(game)
+            g_after, _ = simulate_path(g_copy, path)
+            v = expectimax_value(g_after, depth - 1, root_player_id, branch_limit)
+            total_value += v
+        return total_value / max(len(scored_children), 1)
 
 
 def expectimax_move(game, depth=2):
@@ -191,6 +208,7 @@ def expectimax_move(game, depth=2):
     for item in moves_dict:
         path = item[1]
         g_copy = copy_game(game)
+        # path is a list of moves - 0,1,2,3. See above for mapping of numbers to move
         g_after, lines_cleared = simulate_path(g_copy, path)
         if lines_cleared > 0:
             best_moves.append((lines_cleared, path))
